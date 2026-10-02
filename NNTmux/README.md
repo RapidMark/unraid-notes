@@ -56,6 +56,16 @@ It runs in the background and logs to `predb-import/srrdb_backfill.log`. It's sl
 docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --predb
 ```
 
+## Start with a short backfill
+
+Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once, release processing can't keep up, and almost nothing gets an NZB. Start with a few days and raise it slowly.
+
+If it already happened, this clears the stuck headers and keeps your existing releases:
+
+```
+docker exec -u www-data -w /app NNTmux php artisan nntmux:reset-truncate
+```
+
 ## Database on cache, NZBs on the array
 
 Keep **Config** (the database) on the cache pool. Point **Data** (NZBs and covers) at an array share. It grows fast.

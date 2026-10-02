@@ -60,7 +60,7 @@ docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --pr
 
 Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once, release processing can't keep up, and almost nothing gets an NZB. Start with a few days and raise it slowly.
 
-If it already happened, this clears the stuck headers and keeps your existing releases:
+If it already happened, this clears the stuck headers. Releases that have an NZB are kept:
 
 ```
 docker exec -u www-data -w /app NNTmux php artisan nntmux:reset-truncate

@@ -56,6 +56,30 @@ It runs in the background and logs to `predb-import/srrdb_backfill.log`. It's sl
 docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --predb
 ```
 
+## Skip tiny junk releases
+
+Obfuscated posts split one episode across many random poster names. NNTmux turns each piece into its own one-file "release" of a few hundred KB, useless to download. Mine were 83% of the index.
+
+In the template (advanced view), set:
+
+| Template field | Variable | Value |
+|---|---|---|
+| Minimum release size (MB) | `MIN_RELEASE_SIZE_MB` | `50` |
+
+If you already have them, clear them out from the Unraid terminal. Movies/TV:
+
+```
+docker exec -u www-data -w /app NNTmux php artisan releases:remove-crap --type=size --time=full --delete
+```
+
+Hashed/Misc: put [`junk_cleanup.php`](scripts/junk_cleanup.php) in `appdata/nntmux/`, then:
+
+```
+docker exec -d -u www-data -w /app NNTmux php artisan tinker --execute="require '/config/junk_cleanup.php';"
+```
+
+Progress goes to `appdata/nntmux/junk_cleanup.log`. It's slow on a big index (hours).
+
 ## Start with a short backfill
 
 Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once, release processing can't keep up, and almost nothing gets an NZB. Start with a few days and raise it slowly.

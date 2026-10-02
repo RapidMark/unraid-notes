@@ -66,6 +66,10 @@ If it already happened, this clears the stuck headers. Releases that have an NZB
 docker exec -u www-data -w /app NNTmux php artisan nntmux:reset-truncate
 ```
 
+## Give the database more memory
+
+The template's **MariaDB buffer pool** (`DB_INNODB_BUFFER_POOL_SIZE`) defaults to `1G`. Set it to about half your spare RAM, e.g. `16G` or `32G`. Too small and the database lives on disk and everything slows down.
+
 ## Database on cache, NZBs on the array
 
 Keep **Config** (the database) on the cache pool. Point **Data** (NZBs and covers) at an array share. It grows fast.

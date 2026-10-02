@@ -1,0 +1,81 @@
+# NNTmux on Unraid
+
+Things I wish I'd known.
+
+## Getting real names (PreDB)
+
+Most posts on Usenet now have hashed or random names, e.g. `9ypUjdMZfNOnlJaB` or `78e1e0d363ad2ce9.bin`. To turn those into real release names, NNTmux looks inside each release and matches what it finds against the **PreDB**, a big list of real release names.
+
+The PreDB starts empty. Until you fill it, almost nothing gets a proper name.
+
+### 1. Let NNTmux look inside releases
+
+In the container template (advanced view), set:
+
+| Template field | Variable | Value |
+|---|---|---|
+| Look inside releases | `CHECK_PASSWORDED_RARS` | `true` |
+| Use PAR2 names | `ADD_PAR2` | `true` |
+| Fix release names | `FIX_NAMES` | `true` |
+
+### 2. Keep it filled going forward
+
+In the template, set:
+
+| Template field | Variable | Value |
+|---|---|---|
+| IRC PRE scraper nick | `SCRAPE_IRC_USERNAME` | a name plus a few random characters, e.g. `yourname_k7q2x` |
+
+That turns on the IRC scraper, which sits in `#PreNNTmux` on SynIRC and adds new releases as they come out (about 2,500 a day).
+
+The nick has to be unique. If someone else is using it, the scraper quietly fails and the PreDB stops growing. If that happens, change the nick.
+
+### 3. Backfill (optional)
+
+The scraper only catches what's new. For older posts, backfill. Run these from the Unraid terminal.
+
+**2014 to May 2024:** download the `.csv.gz` files from [nZEDb/nZEDbPre_Dumps](https://github.com/nZEDb/nZEDbPre_Dumps) into `appdata/nntmux/predb-import/gz/` and put [`predb_dump_import.php`](scripts/predb_dump_import.php) in `appdata/nntmux/predb-import/`. Then:
+
+```
+docker exec -u www-data NNTmux php /app/artisan tinker --execute="require '/config/predb-import/predb_dump_import.php';"
+```
+
+About 7M names.
+
+**May 2024 to today:** put [`srrdb_backfill.php`](scripts/srrdb_backfill.php) in `appdata/nntmux/predb-import/`. Then:
+
+```
+docker exec -d -u www-data NNTmux php /app/artisan tinker --execute="require '/config/predb-import/srrdb_backfill.php';"
+```
+
+It runs in the background and logs to `predb-import/srrdb_backfill.log`. It's slow on purpose (srrDB is volunteer-run), and you can stop and restart it. Mine took about 30 hours.
+
+**When both are done, rebuild the search index:**
+
+```
+docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --predb
+```
+
+## Database on cache, NZBs on the array
+
+Keep **Config** (the database) on the cache pool. Point **Data** (NZBs and covers) at an array share. It grows fast.
+
+## Share your Usenet connections
+
+NNTmux needs its own connections. If your provider allows 50, give your downloader 40 and NNTmux 10.
+
+## Threads
+
+Everything starts at 1 thread. What I use with 10 connections (Admin → Site Settings → Advanced - Threaded Settings):
+
+| Setting | Threads | Uses connections |
+|---|---|---|
+| `binarythreads` | 6 | yes |
+| `postthreads` | 2 | yes |
+| `nfothreads` | 2 | yes |
+| `releasethreads` | 4 | no |
+| `fixnamethreads` | 4 | no |
+
+Keep the ones that use connections at or under your NNTmux connection count. The others only use CPU.
+
+If you turn on Usenet backfill (Admin → Tmux), it needs connections too. Drop `binarythreads` to make room.

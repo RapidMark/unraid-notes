@@ -108,12 +108,13 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 
 | Setting | Threads | Uses connections |
 |---|---|---|
-| `binarythreads` | 6 | yes |
+| `binarythreads` | 4 | yes |
 | `postthreads` | 2 | yes |
 | `nfothreads` | 2 | yes |
+| `backfillthreads` | 1 | yes |
 | `releasethreads` | 4 | no |
 | `fixnamethreads` | 4 | no |
 
 Keep the ones that use connections at or under your NNTmux connection count. The others only use CPU.
 
-If you turn on Usenet backfill (Admin → Tmux), it needs connections too. Drop `binarythreads` to make room.
+More binary threads isn't better. At 6 I got thousands of "Lock retries exhausted" errors a day, and those headers are lost.

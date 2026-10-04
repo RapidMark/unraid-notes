@@ -117,4 +117,4 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 
 Keep the ones that use connections at or under your NNTmux connection count. The others only use CPU.
 
-More binary threads isn't better. At 6 I got thousands of "Lock retries exhausted" errors a day, and those headers are lost.
+Start `binarythreads` at 4. If a busy group falls behind on new posts, raise it. Older images threw thousands of "Lock retries exhausted" errors a day at 5-6 threads; current images barely do, so update first.

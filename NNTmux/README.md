@@ -82,7 +82,7 @@ Progress goes to `appdata/nntmux/junk_cleanup.log`. It's slow on a big index (ho
 
 ## Start with a short backfill
 
-Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once, release processing can't keep up, and almost nothing gets an NZB. Start with a few days and raise it slowly.
+Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once and release processing falls far behind. Start with a few days and raise it slowly.
 
 If it already happened, this clears the stuck headers. Releases that have an NZB are kept:
 

@@ -56,9 +56,9 @@ It runs in the background and logs to `predb-import/srrdb_backfill.log`. It's sl
 docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --predb
 ```
 
-## Skip tiny junk releases
+## Skip junk fragments
 
-Obfuscated posts split one episode across many random poster names. NNTmux turns each piece into its own one-file "release" of a few hundred KB, useless to download. Mine were 83% of the index.
+Obfuscated posts split one episode across many random poster names. NNTmux turns each piece into its own one-file "release", from a few hundred KB up to one RAR volume (~75 MB). Useless to download. Mine were 83% of the index.
 
 In the template (advanced view), set:
 
@@ -72,13 +72,19 @@ If you already have them, clear them out from the Unraid terminal. Movies/TV:
 docker exec -u www-data -w /app NNTmux php artisan releases:remove-crap --type=size --time=full --delete
 ```
 
-Hashed/Misc: put [`junk_cleanup.php`](scripts/junk_cleanup.php) in `appdata/nntmux/`, then:
+The minimum size doesn't catch the bigger ones. For those, [`junk_cleanup.php`](scripts/junk_cleanup.php) deletes one-file Hashed/Misc releases under 100 MB. Put it in `appdata/nntmux/`, then:
 
 ```
 docker exec -d -u www-data -w /app NNTmux php artisan tinker --execute="require '/config/junk_cleanup.php';"
 ```
 
 Progress goes to `appdata/nntmux/junk_cleanup.log`. It's slow on a big index (hours).
+
+They keep coming, so run it hourly. Save this as `/boot/config/plugins/dynamix/nntmux-junk.cron`, then run `update_cron`:
+
+```
+23 * * * * /bin/bash -c 'pgrep -f junk_cleanup.php >/dev/null || docker exec -u www-data -w /app NNTmux php artisan tinker --execute="require \"/config/junk_cleanup.php\";" >/dev/null 2>&1'
+```
 
 ## Start with a short backfill
 

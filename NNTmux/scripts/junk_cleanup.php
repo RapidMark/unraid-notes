@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 $mgmt = app(App\Services\Releases\ReleaseManagementService::class);
 $nzb = app(App\Services\Nzb\NzbService::class);
 $img = app(App\Services\ReleaseImageService::class);
-$minSize = 52428800;
+$minSize = 104857600;
 $lastId = 0;
 $total = 0;
 do {

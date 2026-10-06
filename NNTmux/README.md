@@ -88,7 +88,7 @@ They keep coming, so run it hourly. Save this as `/boot/config/plugins/dynamix/n
 
 ## Check for stuck groups
 
-Sometimes a group's position goes bad and NNTmux starts crawling posts from years ago instead of new ones. Signs: old releases (2008, 2009) showing up as new, and collections piling up. Check from the Unraid terminal:
+A group's position could go bad and NNTmux would start crawling posts from years ago instead of new ones. Fixed in NNTmux since October 2026; groups that got stuck before you updated stay stuck until you fix them. Signs: old releases (2008, 2009) showing up as new, and collections piling up. Check from the Unraid terminal:
 
 ```
 docker exec NNTmux mariadb -e "select name from nntmux.usenet_groups where active=1 and (last_record < first_record or last_record_postdate < now() - interval 7 day)"

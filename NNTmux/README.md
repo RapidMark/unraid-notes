@@ -83,7 +83,7 @@ Progress goes to `appdata/nntmux/junk_cleanup.log`. It's slow on a big index (ho
 They keep coming, so run it hourly. Save this as `/boot/config/plugins/dynamix/nntmux-junk.cron`, then run `update_cron`:
 
 ```
-23 * * * * /bin/bash -c 'pgrep -f "[j]unk_cleanup.php" >/dev/null || docker exec -u www-data -w /app NNTmux php artisan tinker --execute="require \"/config/junk_cleanup.php\";" >/dev/null 2>&1'
+23 * * * * flock -n /tmp/nntmux-junk.lock docker exec -u www-data -w /app NNTmux php artisan tinker --execute="require '/config/junk_cleanup.php';" >/dev/null 2>&1
 ```
 
 ## Start with a short backfill

@@ -86,6 +86,22 @@ They keep coming, so run it hourly. Save this as `/boot/config/plugins/dynamix/n
 23 * * * * flock -n /tmp/nntmux-junk.lock docker exec -u www-data -w /app NNTmux php artisan tinker --execute="require '/config/junk_cleanup.php';" >/dev/null 2>&1
 ```
 
+## Check for stuck groups
+
+Sometimes a group's position goes bad and NNTmux starts crawling posts from years ago instead of new ones. Signs: old releases (2008, 2009) showing up as new, and collections piling up. Check from the Unraid terminal:
+
+```
+docker exec NNTmux mariadb -e "select name from nntmux.usenet_groups where active=1 and last_record > 0 and last_record < first_record"
+```
+
+Any names listed are stuck. Put [`fix_stuck_groups.php`](scripts/fix_stuck_groups.php) in `appdata/nntmux/`, then:
+
+```
+docker exec -u www-data -w /app NNTmux php artisan tinker --execute="require '/config/fix_stuck_groups.php';"
+```
+
+It restarts them at current posts. Your existing releases are kept.
+
 ## Start with a short backfill
 
 Don't set a big Usenet backfill (thousands of days) on a new install. It pulls years of headers at once and release processing falls far behind. Start with a few days and raise it slowly.

@@ -110,16 +110,16 @@ NNTmux needs its own connections. If your provider allows 50, give your download
 
 ## Threads
 
-Everything starts at 1 thread. What I use with 10 connections (Admin → Site Settings → Advanced - Threaded Settings):
+Everything starts at 1 thread. What I use with 10 connections (Admin → Site Settings, **Ingestion** and **Post Processing** tabs):
 
 | Setting | Threads | Uses connections |
 |---|---|---|
-| `binarythreads` | 4 | yes |
-| `postthreads` | 2 | yes |
-| `nfothreads` | 2 | yes |
-| `backfillthreads` | 1 | yes |
-| `releasethreads` | 4 | no |
-| `fixnamethreads` | 4 | no |
+| `binary_threads` | 4 | yes |
+| `post_threads` | 2 | yes |
+| `nfo_threads` | 2 | yes |
+| `backfill_threads` | 1 | yes |
+| `release_threads` | 4 | no |
+| `fix_name_threads` | 4 | no |
 
 Keep the ones that use connections at or under your NNTmux connection count. The others only use CPU.
 

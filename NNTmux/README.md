@@ -131,12 +131,34 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 | Setting | Threads | Uses connections |
 |---|---|---|
 | `binary_threads` | 4 | yes |
-| `post_threads` | 2 | yes |
-| `nfo_threads` | 2 | yes |
+| `post_threads` | 16 | yes |
+| `nfo_threads` | 8 | yes |
 | `backfill_threads` | 1 | yes |
 | `release_threads` | 4 | no |
 | `fix_name_threads` | 4 | no |
 
-Keep the ones that use connections at or under your NNTmux connection count. The others only use CPU.
+Also on the Post Processing tab, set `max_additional_processed` to `100` (default 25).
 
 4 binary threads was the sweet spot. At 6 I got 8x the "Lock retries exhausted" errors and 30% fewer releases, so more threads made it slower.
+
+Post processing is different. It splits releases into 16 groups (by the first character of the release ID), so 16 is the most `post_threads` can use. Going from 2 threads at 25 per batch to 16 at 100 checked about 10,000 releases an hour instead of 1,700, with no errors.
+
+NNTmux only opens a few Usenet connections at a time (3 when I checked), so these counts worked with 10. If your provider reports too many connections, lower `post_threads` and `nfo_threads` first.
+
+## Shorter collection timeout
+
+Some uploads post every piece of a file under a different random subject, often in different groups. NNTmux can't join them, so each piece sits as an unfinished collection until the timeout deletes it. At the default 48 hours they pile up into millions and slow everything down.
+
+Set `collection_timeout_hours` to `12` (Admin → Site Settings → **Ingestion**). Normal posts finish long before that.
+
+## Use it through NZBHydra
+
+If you have NZBHydra, add NNTmux there, not directly in Sonarr and Radarr. Otherwise every search hits NNTmux twice.
+
+In NZBHydra, give NNTmux the highest **score** (I use 100) so its copy wins when several indexers have the same release, and clear its API hit and download limits.
+
+NNTmux allows 60 API requests a minute per IP, and that isn't a setting. With NZBHydra in front it's only one client, which helps.
+
+## What it won't find
+
+Many new P2P uploads post each piece of a file under its own random subject, in random groups. Only the uploader's NZB says which pieces belong together, and NNTmux can't assemble them from headers. In my test, 7 of 10 new releases on a paid indexer were posted like this. Keep a paid indexer behind NNTmux in NZBHydra for those.

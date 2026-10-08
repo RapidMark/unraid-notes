@@ -153,6 +153,18 @@ No errors at any step. At 32, NNTmux used up to 19 Usenet connections at once, s
 
 Post processing and the NFO step take turns, so while there's a big backlog the NFO queue moves slowly. It catches up once the backlog is done.
 
+## Raise part repair
+
+Header fetches miss some articles, and part repair fetches them again later. At the default 15,000 per run it falls far behind on a busy group like boneless (millions a day). Set `max_part_repair` to `100000` (Admin → Site Settings → **Ingestion**).
+
+## Metadata keys
+
+Fill in the template's **TMDB**, **OMDb**, **TVDB** and **Fanart.tv** keys (advanced view). OMDb is how NNTmux gets IMDb data: IMDb blocks NNTmux's direct lookups, and IMDb's own API isn't sold to individuals. Trakt now charges for API access; you can leave it empty.
+
+## Compressed headers
+
+On by default (template: **Compressed headers**). Headers download compressed, which saves a lot of bandwidth. If your provider doesn't support it (`XFEATURE COMPRESS GZIP`), set it to `false`.
+
 ## Shorter collection timeout
 
 Some uploads post every piece of a file under a different random subject, often in different groups. NNTmux can't join them, so each piece sits as an unfinished collection until the timeout deletes it. At the default 48 hours they pile up into millions and slow everything down.

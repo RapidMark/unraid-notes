@@ -131,7 +131,7 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 | Setting | Threads | Uses connections |
 |---|---|---|
 | `binary_threads` | 4 | yes |
-| `post_threads` | 16 | yes |
+| `post_threads` | 32 | yes |
 | `nfo_threads` | 8 | yes |
 | `backfill_threads` | 1 | yes |
 | `release_threads` | 4 | no |
@@ -141,9 +141,17 @@ Also on the Post Processing tab, set `max_additional_processed` to `100` (defaul
 
 4 binary threads was the sweet spot. At 6 I got 8x the "Lock retries exhausted" errors and 30% fewer releases, so more threads made it slower.
 
-Post processing is different. It splits releases into 16 groups (by the first character of the release ID), so 16 is the most `post_threads` can use. Going from 2 threads at 25 per batch to 16 at 100 checked about 10,000 releases an hour instead of 1,700, with no errors.
+Post processing is different: its workers mostly wait on Usenet downloads, so more of them help. With a backlog, NNTmux puts several workers on the same part of it, up to `post_threads`. My checking rate per hour:
 
-NNTmux only opens a few Usenet connections at a time (3 when I checked), so these counts worked with 10. If your provider reports too many connections, lower `post_threads` and `nfo_threads` first.
+| `post_threads` | Batch | Releases checked per hour |
+|---|---|---|
+| 2 | 25 | 1,700 |
+| 16 | 100 | 12,300 |
+| 32 | 100 | 27,000 |
+
+No errors at any step. At 32, NNTmux used up to 19 Usenet connections at once, so I lowered my downloader to 20 on that provider. If your provider reports too many connections, lower `post_threads` and `nfo_threads` first.
+
+Post processing and the NFO step take turns, so while there's a big backlog the NFO queue moves slowly. It catches up once the backlog is done.
 
 ## Shorter collection timeout
 

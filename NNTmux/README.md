@@ -165,6 +165,8 @@ Fill in the template's **TMDB**, **OMDb**, **TVDB** and **Fanart.tv** keys (adva
 
 On by default (template: **Compressed headers**). Headers download compressed, which saves a lot of bandwidth. If your provider doesn't support it (`XFEATURE COMPRESS GZIP`), set it to `false`.
 
+Images before 2026-10-09 often cut compressed headers off, which logged `Decompression of OVER headers failed.` and stopped part repair from ever running. Update the container if you see that.
+
 ## Shorter collection timeout
 
 Some uploads post every piece of a file under a different random subject, often in different groups. NNTmux can't join them, so each piece sits as an unfinished collection until the timeout deletes it. At the default 48 hours they pile up into millions and slow everything down.

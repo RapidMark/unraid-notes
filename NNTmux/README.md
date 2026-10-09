@@ -159,7 +159,11 @@ Header fetches miss some articles, and part repair fetches them again later. At 
 
 ## Metadata keys
 
-Fill in the template's **TMDB**, **OMDb**, **TVDB** and **Fanart.tv** keys (advanced view). OMDb is how NNTmux gets IMDb data: IMDb blocks NNTmux's direct lookups, and IMDb's own API isn't sold to individuals. Trakt now charges for API access; you can leave it empty.
+Fill in the template's **TMDB**, **OMDb**, **TVDB** and **Fanart.tv** keys (advanced view). Trakt now charges for API access; you can leave it empty. TVDB also needs your subscriber **PIN**, otherwise it runs in local mode only.
+
+When NNTmux starts, it writes one line per source it can't use (missing key or switched off) at the top of the log, and then skips those sources quietly.
+
+OMDb is how NNTmux gets IMDb data. IMDb answers scripts with a bot check (`HTTP 202`, empty page) from any network, so direct IMDb lookups rarely work. The template's **IMDb scraping** field is on: after a block NNTmux pauses IMDb lookups for an hour (**IMDb block pause**) and then tries once. Leave **imdbapi.dev fallback** off; that site is gone.
 
 ## Compressed headers
 

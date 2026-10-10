@@ -171,6 +171,23 @@ On by default (template: **Compressed headers**). Headers download compressed, w
 
 Images before 2026-10-09 often cut compressed headers off, which logged `Decompression of OVER headers failed.` and stopped part repair from ever running. Update the container if you see that.
 
+## Passworded and unreadable archives
+
+NNTmux looks inside each release's archive to spot passwords and real file names. Until October 2026 it could only read RAR and ZIP, so 7z uploads (most of them passworded) and obfuscated posts stayed at "unknown" forever.
+
+Now it reads 7z too (the template's **7-Zip path**), samples a few files of obfuscated posts to find the archive (**Archive probe files**), and gives an archive it can't read one more try a day later (**Archive retry delay**). Plain videos count as not passworded.
+
+Passworded releases stay hidden from Sonarr and Radarr as long as **show passworded releases** is off (the default), so they never get downloaded.
+
+To re-check releases that were already stuck before you updated, run once from the Unraid terminal:
+
+```
+docker exec -u www-data -w /app NNTmux php artisan releases:retry-archive-inspection --dry-run
+docker exec -u www-data -w /app NNTmux php artisan releases:retry-archive-inspection
+```
+
+Whatever still can't be read after that stays "unknown"; most of those are old posts whose pieces are gone from the server.
+
 ## Shorter collection timeout
 
 Some uploads post every piece of a file under a different random subject, often in different groups. NNTmux can't join them, so each piece sits as an unfinished collection until the timeout deletes it. At the default 48 hours they pile up into millions and slow everything down.

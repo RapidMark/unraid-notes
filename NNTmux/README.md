@@ -2,6 +2,8 @@
 
 Things I wish I'd known.
 
+The image (`rapidmark/nntmux`) is plain upstream NNTmux plus the Unraid packaging (MariaDB, Manticore, Redis, native yEnc, 7-Zip in one container). Every code fix it carried along the way has been merged into NNTmux itself.
+
 ## Getting real names (PreDB)
 
 Most posts on Usenet now have hashed or random names, e.g. `9ypUjdMZfNOnlJaB` or `78e1e0d363ad2ce9.bin`. To turn those into real release names, NNTmux looks inside each release and matches what it finds against the **PreDB**, a big list of real release names.

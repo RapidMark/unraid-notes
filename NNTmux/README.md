@@ -239,4 +239,6 @@ It's not about which groups you index. Here's what I found when I compared 400 n
 - In that group, NNTmux had about 170,000 one-article collections in any 5-minute window.
 - Only about 13 of the TV episodes became releases in NNTmux.
 
+I checked the headers behind one of those releases using the indexer's NZB. Each of its articles had its own random poster (`87d510ae8e <5215b9a@09a06.com>`), a random subject, and a random group (erotica, ath, cores, nl, mom, hdtv…), all posted within the same few seconds. No part counters, and nothing shared between articles. NNTmux ignores articles without a part counter, and even if it kept them, nothing short of the uploader's NZB ties them back together.
+
 Keep a paid indexer behind NNTmux in NZBHydra for those.

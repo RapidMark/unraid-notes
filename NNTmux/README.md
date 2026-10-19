@@ -84,6 +84,14 @@ To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`
 
 The entries get the indexer's name as their source, e.g. `drunkenslug`.
 
+## Index every group an upload uses
+
+Some uploaders spread each upload's articles over several groups. If NNTmux reads only some of them, every file stays at 70–80% and the release is never created. A typical set is alt.binaries.multimedia.alias, .aviation, .rail plus alt.binaries.sleazemovies (despite the name, mostly ordinary movies and TV). After adding sleazemovies I had 1,606 named uploads stuck incomplete that should now finish.
+
+To check a stuck upload: take an NZB for it from another indexer and look up a missing article's `Newsgroups:` header. That's the group you're missing.
+
+alt.binaries.tv.deutsch is small and worth adding if German DL releases are acceptable as a fallback (they carry the English track too).
+
 ## Skip junk fragments
 
 Obfuscated posts split one episode across many random poster names. NNTmux turns each piece into its own one-file "release", from a few hundred KB up to one RAR volume (~75 MB). Useless to download. Mine were 83% of the index.
@@ -150,7 +158,7 @@ Keep **Config** (the database) on the cache pool. Point **Data** (NZBs and cover
 
 ## Share your Usenet connections
 
-NNTmux needs its own connections. If your provider allows 50, give your downloader 40 and NNTmux 10.
+NNTmux needs its own connections, and so do the rebuild scripts below. With 50 at my provider: downloader 20, NNTmux 20 (`NNTP_CONNECTIONS`), scripts up to 6, 4 spare. Going over the provider's limit makes whichever program connects last fail, often NNTmux's header downloads.
 
 ## Threads
 
@@ -226,6 +234,8 @@ Set `collection_timeout_hours` to `12` (Admin → Site Settings → **Ingestion*
 
 If you have NZBHydra, add NNTmux there, not directly in Sonarr and Radarr. Otherwise every search hits NNTmux twice.
 
+Sonarr and Radarr see NZBHydra as one indexer. If any indexer behind it refuses a download, they blame NZBHydra and switch it off, taking every other indexer with it. Mine was off for almost two days that way. So for every indexer with a small allowance, set its **API hit limit** and **download limit** in NZBHydra a little under the real ones, so NZBHydra stops offering its results before the indexer starts refusing. NZBHydra's "fallback for failed downloads" doesn't help with these: for some indexers (Tabula-Rasa, NZB Finder) NZBHydra has to send Radarr straight to the indexer, so it never sees the failure. Give limited indexers a lower score too, so a copy from an unlimited indexer wins.
+
 In NZBHydra, give NNTmux the highest **score** (I use 100) so its copy wins when several indexers have the same release, and clear its API hit and download limits.
 
 NNTmux allows 60 API requests a minute per IP, and that isn't a setting. With NZBHydra in front it's only one client, which helps.
@@ -242,3 +252,16 @@ It's not about which groups you index. Here's what I found when I compared 400 n
 I checked the headers behind one of those releases using the indexer's NZB. Each of its articles had its own random poster (`87d510ae8e <5215b9a@09a06.com>`), a random subject, and a random group (erotica, ath, cores, nl, mom, hdtv…), all posted within the same few seconds. No part counters, and nothing shared between articles. NNTmux ignores articles without a part counter, and even if it kept them, nothing short of the uploader's NZB ties them back together.
 
 Keep a paid indexer behind NNTmux in NZBHydra for those.
+
+## Rebuild obfuscated uploads (experimental)
+
+Not every obfuscated upload is hopeless. The scripts in [`scripts/regroup/`](scripts/regroup/) run every 15 minutes from cron on the Unraid host and handle two posting styles NNTmux can't:
+
+- **File number kept, random name on every article** (`[27/62] "X8Iqg1gn…" yEnc`). The file number and part counters are enough to rebuild each upload from NNTmux's own unfinished pieces (`regroup.py`). One small article, the PAR2 index, gives the real file names. One more tells whether the archive is passworded. Unlocked uploads are written as NZBs and imported with `nntmux:import-nzbs`. The uploader I found using this style passwords everything, so it imports little, but it's cheap.
+- **One random poster per upload, articles shuffled, the same random name on every volume.** NNTmux never sees these (no part counters). `catalog.py` reads the raw headers, groups them by poster and names each upload from its PAR2 index. `index.py` then downloads the upload once, works out which article belongs where from the PAR2 block checksums (`assemble.py`), and imports an ordinary NZB. That costs one download per upload (about 2.5 GB, 4 minutes). The rebuilt NZBs open fine in NNTmux and NZBGet.
+
+`signatures.py` runs weekly and ranks posting styles by volume, marking which ones NNTmux handles, which the scripts claim and which nobody does, so new styles show up. New techniques go in `techniques.py`.
+
+The rest, where every article has its own random poster, subject and group, can't be rebuilt from headers at all. Those need the uploader's NZB.
+
+The scripts use my paths (`/mnt/user/appdata/nntmux/regroup/`) and read NNTmux's Usenet login from the container at run time.

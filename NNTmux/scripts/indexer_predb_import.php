@@ -30,20 +30,24 @@ for ($page = 0; $page < $maxPages; $page++) {
         if ($title === '' || strlen($title) > 255) continue;
         $seen++;
         $a = [];
-        foreach ($item->children('newznab', true)->attr as $at) $a[(string) $at['name']] = (string) $at['value'];
-        if (Predb::query()->where('title', $title)->exists()) continue;
+        foreach ($item->children('newznab', true)->attr as $at) $a[(string) $at->attributes()['name']] = (string) $at->attributes()['value'];
         $date = strtotime($a['usenetdate'] ?? (string) $item->pubDate) ?: time();
+        $row = [
+            'predate' => date('Y-m-d H:i:s', $date),
+            'source' => $source,
+            'category' => $cats[substr($a['category'] ?? '', 0, 1)] ?? null,
+            'size' => isset($a['size']) ? round($a['size'] / 1048576).'MB' : null,
+            'files' => $a['files'] ?? null,
+            'groups_id' => $groups[$a['group'] ?? ''] ?? 0,
+        ];
+        $existing = Predb::query()->where('title', $title)->first(['id', 'source', 'size']);
+        if ($existing !== null) {
+            // Fill in rows we added before attributes were parsed.
+            if ($existing->source === $source && $existing->size === null) DB::table('predb')->where('id', $existing->id)->update($row);
+            continue;
+        }
         try {
-            $id = DB::table('predb')->insertGetId([
-                'title' => $title,
-                'predate' => date('Y-m-d H:i:s', $date),
-                'source' => $source,
-                'category' => $cats[substr($a['category'] ?? '', 0, 1)] ?? null,
-                'size' => isset($a['size']) ? round($a['size'] / 1048576).'MB' : null,
-                'files' => $a['files'] ?? null,
-                'groups_id' => $groups[$a['group'] ?? ''] ?? 0,
-                'filename' => '',
-            ]);
+            $id = DB::table('predb')->insertGetId($row + ['title' => $title, 'filename' => '']);
             Search::insertPredb(['id' => $id, 'title' => $title, 'filename' => null, 'source' => $source]);
             $new++;
         } catch (\Throwable $e) {

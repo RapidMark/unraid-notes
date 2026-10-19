@@ -66,6 +66,24 @@ It runs in the background and logs to `predb-import/srrdb_backfill.log`. It's sl
 docker exec -u www-data NNTmux php /app/artisan nntmux:populate --manticore --predb
 ```
 
+### 4. Feed it from your paid indexer (optional)
+
+A paid indexer already knows the real names of most new posts. Copying them into the PreDB lets NNTmux rename releases it can match, including re-uploads and backfilled posts.
+
+This only makes sense if your indexer allows that many API calls. Each call returns 100 names, and polling every 15 minutes takes about 100 calls a day across all categories.
+
+Put [`indexer_predb_import.php`](scripts/indexer_predb_import.php) in `appdata/nntmux/` and [`indexer_predb_feed.sh`](scripts/indexer_predb_feed.sh) somewhere on the array. The feed script reads the NZBHydra API key from Sonarr's indexer settings, so it assumes Sonarr goes through NZBHydra on port 5076. Set `INDEXER` to the indexer's name in NZBHydra.
+
+Run it every 15 minutes from a cron file, e.g. `/boot/config/plugins/dynamix/nntmux-indexer-predb.cron`, then run `update_cron`:
+
+```
+*/15 * * * * flock -n /tmp/nntmux-indexer-predb.lock /mnt/user/appdata/nntmux/indexer_predb_feed.sh >/dev/null 2>&1
+```
+
+To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`. NZBHydra stops at 1,500 results per query, so a single query can't go further back.
+
+The entries get the indexer's name as their source, e.g. `drunkenslug`.
+
 ## Skip junk fragments
 
 Obfuscated posts split one episode across many random poster names. NNTmux turns each piece into its own one-file "release", from a few hundred KB up to one RAR volume (~75 MB). Useless to download. Mine were 83% of the index.
@@ -203,24 +221,6 @@ Whatever still can't be read after that stays "unknown"; most of those are old p
 Some uploads post every piece of a file under a different random subject, often in different groups. NNTmux can't join them, so each piece sits as an unfinished collection until the timeout deletes it. At the default 48 hours they pile up into millions and slow everything down.
 
 Set `collection_timeout_hours` to `12` (Admin → Site Settings → **Ingestion**). Normal posts finish long before that.
-
-### 4. Feed it from your paid indexer (optional)
-
-A paid indexer already knows the real names of most new posts. Copying them into the PreDB lets NNTmux rename releases it can match, including re-uploads and backfilled posts.
-
-This only makes sense if your indexer allows that many API calls. Each call returns 100 names, and polling every 15 minutes takes about 100 calls a day across all categories.
-
-Put [`indexer_predb_import.php`](scripts/indexer_predb_import.php) in `appdata/nntmux/` and [`indexer_predb_feed.sh`](scripts/indexer_predb_feed.sh) somewhere on the array. The feed script reads the NZBHydra API key from Sonarr's indexer settings, so it assumes Sonarr goes through NZBHydra on port 5076. Set `INDEXER` to the indexer's name in NZBHydra.
-
-Run it every 15 minutes from a cron file, e.g. `/boot/config/plugins/dynamix/nntmux-indexer-predb.cron`, then run `update_cron`:
-
-```
-*/15 * * * * flock -n /tmp/nntmux-indexer-predb.lock /mnt/user/appdata/nntmux/indexer_predb_feed.sh >/dev/null 2>&1
-```
-
-To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`. NZBHydra stops at 1,500 results per query, so a single query can't go further back.
-
-The entries get the indexer's name as their source, e.g. `drunkenslug`.
 
 ## Use it through NZBHydra
 

@@ -150,7 +150,7 @@ Trying the end of each volume instead (to avoid needing the first article) didn'
 
 - Patterns C and D look groupable (shared upload id / job id) but are small.
 - On-demand rebuild of a pattern E upload for one wanted release: download everything posted by that tool in the cluster (about twice the release) and place it by the yEnc headers. Not built.
-- Upstream: the pattern A grouping and the PAR2 assembler would help every NNTmux install.
+- Upstream: the pattern A grouping and the PAR2 assembler would help every NNTmux install. Not as a PR: A only finds encrypted uploads, and G needs full downloads (a design decision for the maintainer). An issue sharing the findings was considered and parked (2026-10-19); the scripts work beside an unmodified NNTmux via nntmux:import-nzbs.
 
 ## Stats and health checks (planned)
 

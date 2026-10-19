@@ -80,7 +80,7 @@ Run it every 15 minutes from a cron file, e.g. `/boot/config/plugins/dynamix/nnt
 */15 * * * * flock -n /tmp/nntmux-indexer-predb.lock /mnt/user/appdata/nntmux/indexer_predb_feed.sh >/dev/null 2>&1
 ```
 
-To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`. NZBHydra stops at 1,500 results per query, so a single query can't go further back.
+To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`. NZBHydra stops at 1,500 results per query, so a single query can't go further back. To go deeper, set `API_BASE` to the indexer's own API and pass its API key instead of NZBHydra's. Most indexers then allow 125,000 results per category (`PAGES=1250`), which on DrunkenSlug reached back about 9 months for HD movies and years for SD.
 
 The entries get the indexer's name as their source, e.g. `drunkenslug`.
 

@@ -152,6 +152,30 @@ Trying the end of each volume instead (to avoid needing the first article) didn'
 - On-demand rebuild of a pattern E upload for one wanted release: download everything posted by that tool in the cluster (about twice the release) and place it by the yEnc headers. Not built.
 - Upstream: the pattern A grouping and the PAR2 assembler would help every NNTmux install.
 
+## Stats and health checks (planned)
+
+Two different things, kept apart on purpose:
+
+**Health checks**: states with a threshold. They should warn, not draw charts. These are a candidate PR for NNTmux's service-status page (which already has severities), with one log line when the state changes:
+
+| Check | Warns when | Would have caught |
+|---|---|---|
+| PreDB feed | the newest entry from a source is older than N hours | the IRC scraper hanging for 25 hours |
+| Header lag | a group's newest header is more than N minutes behind the server | boneless falling 1.6 hours behind |
+| Stuck uploads | incomplete collections older than N hours pass a threshold | 1,606 uploads stuck because one of their groups wasn't indexed |
+
+**Stats**: counts over time, where the trend matters. First as our own daily/weekly report:
+
+- **Releases per day by category** (movies, TV, software, audio, books, XXX, other): created, named, unnamed, passworded.
+- **Naming sources:** subject, PreDB by source (srrDB / DrunkenSlug / usenet-par2), look-inside, PAR2.
+- **Header volume by posting pattern:** handled by NNTmux, claimed by a technique, unclaimed, including articles dropped at ingest for having no part counter. That counter is the one item that could later become a second NNTmux PR (a real time series).
+- **Per technique:** found / named / passworded / imported.
+- **Coverage against DrunkenSlug:** share and delay for new movies and TV.
+
+NNTmux already exports Prometheus metrics for releases by category, renamed releases, PreDB entries and matches, backlog and connections, but none of the checks above.
+
+Order: build the stats report, then the health-check PR.
+
 ## Plugin system: not yet
 
 `techniques.py` (one entry per technique: recognise, fetch, group) is enough for now. Only two techniques work (A and G), and adding one is a small, contained change. Revisit a real plugin design when there are 4–5 working techniques, when they need their own settings, or when offering this to NNTmux. There it should become a grouping-strategy interface inside NNTmux's release creation, not scripts on the side. `signatures.py` shows when a new high-volume style appears.

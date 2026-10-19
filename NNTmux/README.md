@@ -255,6 +255,8 @@ Keep a paid indexer behind NNTmux in NZBHydra for those.
 
 ## Rebuild obfuscated uploads (experimental)
 
+The details (every posting pattern, what was measured, what failed) are in [header-matching.md](header-matching.md).
+
 Not every obfuscated upload is hopeless. The scripts in [`scripts/regroup/`](scripts/regroup/) run every 15 minutes from cron on the Unraid host and handle two posting styles NNTmux can't:
 
 - **File number kept, random name on every article** (`[27/62] "X8Iqg1gn…" yEnc`). The file number and part counters are enough to rebuild each upload from NNTmux's own unfinished pieces (`regroup.py`). One small article, the PAR2 index, gives the real file names. One more tells whether the archive is passworded. Unlocked uploads are written as NZBs and imported with `nntmux:import-nzbs`. The uploader I found using this style passwords everything, so it imports little, but it's cheap.

@@ -85,3 +85,7 @@ DrunkenSlug's new TV in boneless was this pattern.
 - Patterns C and D look groupable (shared upload id / job id) but are small.
 - On-demand rebuild of a pattern E upload for one wanted release: download everything posted by that tool in the cluster (about twice the release) and place it by the yEnc headers. Not built.
 - Upstream: the pattern A grouping and the PAR2 assembler would help every NNTmux install.
+
+## Plugin system: not yet
+
+`techniques.py` (one entry per technique: recognise, fetch, group) is enough for now. Only two techniques work (A and G), and adding one is a small, contained change. Revisit a real plugin design when there are 4–5 working techniques, when they need their own settings, or when offering this to NNTmux. There it should become a grouping-strategy interface inside NNTmux's release creation, not scripts on the side. `signatures.py` shows when a new high-volume style appears.

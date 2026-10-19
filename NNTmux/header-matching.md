@@ -176,6 +176,18 @@ NNTmux already exports Prometheus metrics for releases by category, renamed rele
 
 Order: build the stats report, then the health-check PR.
 
+## Updating
+
+**NNTmux (the image):** sync the fork with upstream, build, recreate the container, changelog. The scripts live outside the image (appdata + cron files on the flash drive), so an update doesn't touch them, but they rely on NNTmux internals: the collections/binaries/parts and predb tables, `nntmux:import-nzbs`, and the settings classes (`IngestionConfiguration`, `ConfigurationProvider`). After every NNTmux update:
+
+1. `DRY=1 python3 regroup.py`: runs and lists its techniques.
+2. Run `catalog.py` and `index.py` once and check their lines in `regroup.log`.
+3. Import one NZB from `import/` and check it shows up and NNTmux opens it.
+
+**The scripts:** one source of truth (to set up): the scripts live in this repo (`scripts/regroup/`) and are symlinked or synced into `appdata/nntmux/regroup/`, which keeps only state and logs (state files, `catalog/`, `import/`, `regroup.log`, reports). Every change is made here and committed, so the live copy and the notes can't drift.
+
+**Notes and memory:** updated with each change.
+
 ## Plugin system: not yet
 
 `techniques.py` (one entry per technique: recognise, fetch, group) is enough for now. Only two techniques work (A and G), and adding one is a small, contained change. Revisit a real plugin design when there are 4–5 working techniques, when they need their own settings, or when offering this to NNTmux. There it should become a grouping-strategy interface inside NNTmux's release creation, not scripts on the side. `signatures.py` shows when a new high-volume style appears.

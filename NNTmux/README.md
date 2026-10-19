@@ -32,6 +32,14 @@ That turns on the IRC scraper, which sits in `#PreNNTmux` on SynIRC and adds new
 
 The nick has to be unique. If someone else is using it, the scraper quietly fails and the PreDB stops growing. If that happens, change the nick.
 
+The same thing can happen after a dropped connection. When the scraper reconnects, the server may still hold its old nick, and the scraper waits forever for a login that never comes. It looks connected but adds nothing. Mine stopped for about 25 hours like this. To check, look at the newest PreDB entry:
+
+```
+docker exec NNTmux mariadb nntmux -e "select max(predate) from predb where source='srrdb'"
+```
+
+If it's more than a few hours old, restart the scraper: `docker exec NNTmux pkill -f irc:scrape`. It starts again on its own. The fix is in [NNTmux#1900](https://github.com/NNTmux/newznab-tmux/pull/1900).
+
 ### 3. Backfill (optional)
 
 The scraper only catches what's new. For older posts, backfill. Run these from the Unraid terminal.
@@ -196,6 +204,24 @@ Some uploads post every piece of a file under a different random subject, often 
 
 Set `collection_timeout_hours` to `12` (Admin → Site Settings → **Ingestion**). Normal posts finish long before that.
 
+### 4. Feed it from your paid indexer (optional)
+
+A paid indexer already knows the real names of most new posts. Copying them into the PreDB lets NNTmux rename releases it can match, including re-uploads and backfilled posts.
+
+This only makes sense if your indexer allows that many API calls. Each call returns 100 names, and polling every 15 minutes takes about 100 calls a day across all categories.
+
+Put [`indexer_predb_import.php`](scripts/indexer_predb_import.php) in `appdata/nntmux/` and [`indexer_predb_feed.sh`](scripts/indexer_predb_feed.sh) somewhere on the array. The feed script reads the NZBHydra API key from Sonarr's indexer settings, so it assumes Sonarr goes through NZBHydra on port 5076. Set `INDEXER` to the indexer's name in NZBHydra.
+
+Run it every 15 minutes from a cron file, e.g. `/boot/config/plugins/dynamix/nntmux-indexer-predb.cron`, then run `update_cron`:
+
+```
+*/15 * * * * flock -n /tmp/nntmux-indexer-predb.lock /mnt/user/appdata/nntmux/indexer_predb_feed.sh >/dev/null 2>&1
+```
+
+To seed history, run it once per category with `SEED=1 PAGES=15 CATS=<category>`. NZBHydra stops at 1,500 results per query, so a single query can't go further back.
+
+The entries get the indexer's name as their source, e.g. `drunkenslug`.
+
 ## Use it through NZBHydra
 
 If you have NZBHydra, add NNTmux there, not directly in Sonarr and Radarr. Otherwise every search hits NNTmux twice.
@@ -206,4 +232,11 @@ NNTmux allows 60 API requests a minute per IP, and that isn't a setting. With NZ
 
 ## What it won't find
 
-Many new P2P uploads post each piece of a file under its own random subject, in random groups. Only the uploader's NZB says which pieces belong together, and NNTmux can't assemble them from headers. In my test, 7 of 10 new releases on a paid indexer were posted like this. Keep a paid indexer behind NNTmux in NZBHydra for those.
+Many new P2P uploads post each piece of a file under its own random subject, e.g. `[1425/13517] "d6a8c0066ba2b158.bin"`. Only the uploader's NZB says which pieces belong together, and NNTmux can't assemble them from headers.
+
+It's not about which groups you index. Here's what I found when I compared 400 new movies and TV episodes on DrunkenSlug with NNTmux:
+- 137 of the 200 TV episodes were in alt.binaries.boneless, which NNTmux indexes.
+- In that group, NNTmux had about 170,000 one-article collections in any 5-minute window.
+- Only about 13 of the TV episodes became releases in NNTmux.
+
+Keep a paid indexer behind NNTmux in NZBHydra for those.

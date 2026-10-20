@@ -197,7 +197,7 @@ Order: build the stats report, then the health-check PR.
 2. Run `catalog.py` and `index.py` once and check their lines in `regroup.log`.
 3. Import one NZB from `import/` and check it shows up and NNTmux opens it.
 
-**The scripts:** one source of truth (to set up): the scripts live in this repo (`scripts/regroup/`) and are symlinked or synced into `appdata/nntmux/regroup/`, which keeps only state and logs (state files, `catalog/`, `import/`, `regroup.log`, reports). Every change is made here and committed, so the live copy and the notes can't drift.
+**The scripts:** one source of truth. The Python scripts live in this repo (`scripts/regroup/`), and `appdata/nntmux/regroup/` has symlinks to them plus the state and logs (state files, `catalog/`, `import/`, `regroup.log`, reports). Edit here and commit; the cron jobs use the change on their next run. The exception is `catalog_predb.php`: it runs inside the NNTmux container, which can't see this repo, so after editing it, copy it to `appdata/nntmux/regroup/`.
 
 **Notes and memory:** updated with each change.
 

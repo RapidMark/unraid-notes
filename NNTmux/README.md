@@ -166,7 +166,7 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 
 | Setting | Threads | Uses connections |
 |---|---|---|
-| `binary_threads` | 4 | yes |
+| `binary_threads` | 5 | yes |
 | `post_threads` | 32 | yes |
 | `nfo_threads` | 8 | yes |
 | `backfill_threads` | 1 | yes |
@@ -175,7 +175,7 @@ Everything starts at 1 thread. What I use with 10 connections (Admin → Site Se
 
 Also on the Post Processing tab, set `max_additional_processed` to `100` (default 25).
 
-4 binary threads was the sweet spot. At 6 I got 8x the "Lock retries exhausted" errors and 30% fewer releases, so more threads made it slower.
+4–5 binary threads is the sweet spot. At 6 I got 8x the "Lock retries exhausted" errors and 30% fewer releases. A later try with 8 (after the lock fix in NNTmux#1885) still jumped from a few lock errors an hour to 40 in six minutes, so I went back to 5. More threads made it slower, not faster.
 
 Post processing is different: its workers mostly wait on Usenet downloads, so more of them help. With a backlog, NNTmux puts several workers on the same part of it, up to `post_threads`. My checking rate per hour:
 
@@ -188,6 +188,20 @@ Post processing is different: its workers mostly wait on Usenet downloads, so mo
 No errors at any step. At 32, NNTmux used up to 19 Usenet connections at once, so I lowered my downloader to 20 on that provider. If your provider reports too many connections, lower `post_threads` and `nfo_threads` first.
 
 Post processing and the NFO step take turns, so while there's a big backlog the NFO queue moves slowly. It catches up once the backlog is done.
+
+## After recreating the container
+
+Check that NNTmux's processing actually came back. Once, a recreate caused a short Redis outage that killed the tmux monitor and every worker pane: the container showed healthy, but it used 2 Usenet connections, made almost no releases and fell over an hour behind. To check:
+
+```
+docker exec -u www-data NNTmux tmux list-panes -s -t nntmux -F '#{pane_dead}'
+```
+
+A few `1`s are normal (panes for disabled steps). If the first pane (the monitor) is dead or nothing is fetching, restart the processing service:
+
+```
+docker exec NNTmux /command/s6-svc -r /run/service/indexer
+```
 
 ## Raise part repair
 

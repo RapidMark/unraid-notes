@@ -128,6 +128,19 @@ Trying the end of each volume instead (to avoid needing the first article) didn'
 - **NZBHydra stops at 15 pages (1,500 results) per query.** The indexer's own API allows 125,000 per category.
 - **`pkill -f <pattern>` matches the shell running it** if the pattern is in the command line. Kill by PID.
 
+## Matching unnamed releases to indexer names afterwards
+
+With a full DrunkenSlug backfill in PreDB (482,000 movie and 655,000 TV names, back to 2008), unnamed NNTmux releases can be matched by post time (±2 min) and size (±1%), always with time-shifted controls:
+
+| | Unnamed candidates | Matched | By chance (controls) | Real |
+|---|---|---|---|---|
+| Movies (over 70 min) | 5,980 | 1,173 | ~25 | ~1,150, but all except 19 one French dub uploader (VFF), so not applied |
+| TV (18–65 min) | 46,368 | 508 | 68–87 | ~430, mostly English and recent |
+
+For TV, the 212 unambiguous pairs (one name per release and one release per name) were applied with NNTmux's own rename (`ReleaseUpdateService::updateRelease`, type `PreDB FT Exact, `), which re-categorises and updates the search index. They came out as 79 TV Foreign, 37 Sport, 31 HD, 21 SD, 2 UHD, and 35 that stayed in Hashed/Misc because NNTmux didn't recognise the name format.
+
+A plain `php artisan predb:check` after the backfill linked another 27,292 already-named releases to PreDB entries.
+
 ## Things that didn't work
 
 - **Matching on size and time alone:** within a busy window, random sizes matched about as often as the real ones. Always compare with a time-shifted control. The one batch of "matches" I almost trusted (Futurama) turned out to be a Chinese anime upload.

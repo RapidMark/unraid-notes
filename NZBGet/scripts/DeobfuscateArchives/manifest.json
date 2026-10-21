@@ -1,0 +1,23 @@
+{
+  "main": "main.py",
+  "name": "DeobfuscateArchives",
+  "homepage": "",
+  "kind": "POST-PROCESSING",
+  "displayName": "Deobfuscate Archives",
+  "version": "1.0.0",
+  "nzbgetMinVersion": "23.0",
+  "author": "RapidMark",
+  "license": "MIT",
+  "about": "Extracts 7z/RAR/ZIP archives that were posted without a file extension.",
+  "queueEvents": "",
+  "requirements": ["Python 3", "7z and unrar"],
+  "description": [
+    "Obfuscated posts sometimes arrive as a single file with a random name and no extension.",
+    "NZBGet only unpacks archives it recognises by extension, so these stay packed and Sonarr/Radarr find nothing to import.",
+    "This checks extensionless files by their signature, extracts them, and removes the archive once extraction succeeds."
+  ],
+  "options": [],
+  "commands": [],
+  "taskTime": "",
+  "sections": []
+}

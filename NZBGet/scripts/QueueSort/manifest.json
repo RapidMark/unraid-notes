@@ -1,0 +1,30 @@
+{
+  "main": "main.py",
+  "name": "QueueSort",
+  "homepage": "",
+  "kind": "QUEUE",
+  "displayName": "Queue Sort",
+  "version": "1.0.0",
+  "nzbgetMinVersion": "23.0",
+  "author": "RapidMark",
+  "license": "MIT",
+  "about": "Re-sorts the download queue whenever an NZB is added, newest posts first by default.",
+  "queueEvents": "NZB_ADDED",
+  "requirements": ["Python 3"],
+  "description": [
+    "Sonarr and Radarr add releases in whatever order they find them, so a new episode can wait behind a week of old remuxes.",
+    "This sorts the whole queue each time something is added, using NZBGet's own sort. Priorities still come first."
+  ],
+  "options": [
+    {
+      "name": "SortOrder",
+      "displayName": "Sort order",
+      "value": "age+",
+      "description": ["age+ = newest posts first. Also possible: name, priority, category, size, left (each with + or -)."],
+      "select": []
+    }
+  ],
+  "commands": [],
+  "taskTime": "",
+  "sections": []
+}

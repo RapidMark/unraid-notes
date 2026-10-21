@@ -38,7 +38,7 @@ The same thing can happen after a dropped connection. When the scraper reconnect
 docker exec NNTmux mariadb nntmux -e "select max(predate) from predb where source='srrdb'"
 ```
 
-If it's more than a few hours old, restart the scraper: `docker exec NNTmux pkill -f irc:scrape`. It starts again on its own. The fix is in [NNTmux#1900](https://github.com/NNTmux/newznab-tmux/pull/1900).
+If it's more than a few hours old, restart the scraper: `docker exec NNTmux pkill -f irc:scrape`. It starts again on its own. Images from 2026-10-21 on have the fix ([NNTmux#1900](https://github.com/NNTmux/newznab-tmux/pull/1900)).
 
 ### 3. Backfill (optional)
 
@@ -202,6 +202,15 @@ A few `1`s are normal (panes for disabled steps). If the first pane (the monitor
 ```
 docker exec NNTmux /command/s6-svc -r /run/service/indexer
 ```
+
+## Keep the processing alive
+
+All of NNTmux's work runs in tmux panes started by one monitor pane. If the monitor dies, everything stops while the container still shows healthy, and the container's own check only looks at whether the tmux session exists (fix proposed in [NNTmux#1903](https://github.com/NNTmux/newznab-tmux/pull/1903)).
+
+On mine it died twice in two days with `read error on connection to 127.0.0.1:6379`: Redis didn't answer within NNTmux's default 2 seconds while the disk was busy with unpacking and encoding. Two things fixed it:
+
+- **Redis read timeout:** set `REDIS_READ_TIMEOUT` to `10` (advanced setting in the template).
+- **A watchdog:** [`scripts/tmux_watchdog.sh`](scripts/tmux_watchdog.sh) runs every 5 minutes from cron on the Unraid host. If the monitor pane is dead, it stops the tmux session and restarts the processing service, and logs it as `nntmux_watchdog`.
 
 ## Raise part repair
 

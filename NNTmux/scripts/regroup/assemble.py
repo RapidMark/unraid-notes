@@ -166,8 +166,12 @@ def _zeros_crc(n):
     return _ZERO_CRC[n]
 
 
-def rebuild(arts):
-    """-> (report, [(file name, md5 ok, [articles in order])], par2 index article, all ok articles)."""
+def rebuild(arts, budget=200000, stop_on_fail=False):
+    """-> (report, [(file name, md5 ok, [articles in order])], par2 index article, all ok articles).
+
+    budget caps the combinations tried per slice: big uploads (many same-size volumes, slices spanning many
+    articles) have more combinations than a CRC32 can tell apart, so they fail instead of searching forever.
+    """
     ok = [a for a in arts if a[0] != 'missing']
     missing = len(arts) - len(ok)
     index = None
@@ -226,6 +230,8 @@ def rebuild(arts):
                 cov += len(arts_f[cands[p][0]][4]) if cands.get(p) else 0
                 p += 1
 
+            left = [budget]
+
             def search(depth, crc):
                 if depth == len(need):
                     full = crc_combine(crc, _zeros_crc(pad), pad) if pad else crc
@@ -233,6 +239,9 @@ def rebuild(arts):
                 for i in cands.get(need[depth], []):
                     if i in used:
                         continue
+                    left[0] -= 1
+                    if left[0] < 0:
+                        return None
                     c, n = seg[i].get(k, (0, 0))
                     r = search(depth + 1, crc_combine(crc, c, n))
                     if r is not None:
@@ -241,7 +250,8 @@ def rebuild(arts):
 
             pick = search(0, base)
             if pick is None:
-                report.append(f'{f["name"]}: slice {k}/{len(f["slices"])} has no matching article (missing or damaged)')
+                why = 'too many combinations' if left[0] < 0 else 'no matching article (missing or damaged)'
+                report.append(f'{f["name"]}: slice {k}/{len(f["slices"])}: {why}')
                 failed = True
                 break
             for i in pick:
@@ -249,6 +259,8 @@ def rebuild(arts):
                 used.add(i)
                 covered += len(arts_f[i][4])
         if failed:
+            if stop_on_fail:
+                break
             continue
         data = b''.join(arts_f[i][4] for i in chosen)[:L]
         good = hashlib.md5(data).digest() == f['md5']

@@ -95,9 +95,10 @@ def main():
             continue
         t0 = time.time()
         _, arts = assemble.fetch_all(r['groups'].split(',')[0], poster)
-        report, built, index_article, ok = assemble.rebuild(arts)
+        report, built, index_article, ok = assemble.rebuild(arts, stop_on_fail=True)
         good = [b for b in built if b[1]]
-        if not built or len(good) != len(built):
+        done, want = map(int, re.search(r'files rebuilt: (\d+)/(\d+)', report).groups())
+        if not built or len(good) != len(built) or done != want:
             state[poster] = {'t': now, 'result': 'could not rebuild', 'name': name, 'report': report.split('\n')[0]}
             log(f'index: could not rebuild {name}: {report.splitlines()[0]}')
             continue

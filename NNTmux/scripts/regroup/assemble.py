@@ -166,11 +166,12 @@ def _zeros_crc(n):
     return _ZERO_CRC[n]
 
 
-def rebuild(arts, budget=200000, stop_on_fail=False):
+def rebuild(arts, budget=200000, stop_on_fail=False, max_gaps=5):
     """-> (report, [(file name, md5 ok, [articles in order])], par2 index article, all ok articles).
 
     budget caps the combinations tried per slice: big uploads (many same-size volumes, slices spanning many
     articles) have more combinations than a CRC32 can tell apart, so they fail instead of searching forever.
+    max_gaps: articles an upload may lack in total; files with gaps are placed by elimination (see below).
     """
     ok = [a for a in arts if a[0] != 'missing']
     missing = len(arts) - len(ok)
@@ -189,29 +190,39 @@ def rebuild(arts, budget=200000, stop_on_fail=False):
     by_size = collections.defaultdict(list)
     for a in ok:
         by_size[a[2]].append(a)
-    report, written = [], 0
+    taken = collections.defaultdict(set)              # per file size: articles placed in a rebuilt file
+    prep = {}
+
+    def prepare(L):
+        """every article's CRC32 per slice it touches (computed once per size), and candidates per part number"""
+        if L not in prep:
+            seg = []
+            for a in by_size[L]:
+                b, d, parts, pos = a[3], a[4], {}, 0
+                while pos < len(d):
+                    k = (b + pos) // S
+                    cut = min(len(d), (k + 1) * S - b)
+                    parts[k] = (zlib.crc32(d[pos:cut]), cut - pos)
+                    pos = cut
+                seg.append(parts)
+            cands = collections.defaultdict(list)
+            for i, a in enumerate(by_size[L]):
+                cands[a[0]].append(i)
+            prep[L] = seg, cands
+        return prep[L]
+
+    report, written, deferred = [], 0, []
     for f in files:
         L = f['length']
         arts_f = by_size.get(L, [])
         if not arts_f:
             report.append(f'{f["name"]}: no articles of size {L}')
             continue
-        # every article's CRC32 per slice it touches, computed once
-        seg = []
-        for a in arts_f:
-            b, d, parts, pos = a[3], a[4], {}, 0
-            while pos < len(d):
-                k = (b + pos) // S
-                cut = min(len(d), (k + 1) * S - b)
-                parts[k] = (zlib.crc32(d[pos:cut]), cut - pos)
-                pos = cut
-            seg.append(parts)
-        cands = collections.defaultdict(list)
-        for i, a in enumerate(arts_f):
-            cands[a[0]].append(i)
+        seg, cands = prepare(L)
         firsts = [i for i in cands[1] if hashlib.md5(arts_f[i][4][:16384]).digest() == f['md5_16k']]
         if len(firsts) != 1:
             report.append(f'{f["name"]}: {len(firsts)} first-article matches')
+            deferred.append(f)
             continue
         total = arts_f[firsts[0]][1]
         chosen, used, failed = [firsts[0]], {firsts[0]}, False
@@ -259,20 +270,70 @@ def rebuild(arts, budget=200000, stop_on_fail=False):
                 used.add(i)
                 covered += len(arts_f[i][4])
         if failed:
-            if stop_on_fail:
+            deferred.append(f)
+            if stop_on_fail and len(deferred) > max_gaps:
                 break
             continue
         data = b''.join(arts_f[i][4] for i in chosen)[:L]
         good = hashlib.md5(data).digest() == f['md5']
-        built.append((f['name'], good, [arts_f[i] for i in chosen]))
+        if good:
+            taken[L].update(chosen)
+        built.append((f['name'], good, [arts_f[i] for i in chosen], 0))
         written += 1
         report.append(f'{f["name"]}: {"OK" if good else "MD5 MISMATCH"} ({len(chosen)} parts)')
-    return (f'missing articles: {missing}; files rebuilt: {written}/{len(files)}\n' + '\n'.join(report)), built, index_article, ok
+
+    # A file that failed because one of its articles is missing: once every other file of its size is rebuilt, the
+    # articles left over can only be its own. Place them by part number, check every slice not touching a gap, and
+    # leave the gaps to PAR2 repair in the download client.
+    gaps_total = 0
+    for f in deferred if len(deferred) <= max_gaps else []:
+        L = f['length']
+        arts_f = by_size.get(L, [])
+        if not arts_f:
+            continue
+        seg, cands = prepare(L)
+        rest = collections.defaultdict(list)
+        for i, a in enumerate(arts_f):
+            if i not in taken[L]:
+                rest[a[0]].append(i)
+        total = arts_f[next(iter(rest.values()))[0]][1] if rest else 0
+        if not rest or any(len(v) > 1 for v in rest.values()):
+            report.append(f'{f["name"]}: leftover articles are ambiguous, cannot place')
+            continue
+        gaps = [p for p in range(1, total + 1) if p not in rest]
+        if gaps_total + len(gaps) > max_gaps:
+            report.append(f'{f["name"]}: {len(gaps)} articles missing, too many for repair')
+            continue
+        order = [rest[p][0] for p in sorted(rest)]
+        bad = 0
+        for k, (_, want) in enumerate(f['slices']):
+            lo, hi = k * S, min((k + 1) * S, L)
+            inside = [i for i in order if arts_f[i][3] < hi and arts_f[i][3] + len(arts_f[i][4]) > lo]
+            covered = sum(seg[i][k][1] for i in inside if k in seg[i])
+            if covered != hi - lo:
+                continue                                 # slice touches a gap
+            crc = 0
+            for i in sorted(inside, key=lambda i: arts_f[i][3]):
+                c, n = seg[i][k]
+                crc = crc_combine(crc, c, n)
+            pad = S - (hi - lo)
+            if (crc_combine(crc, _zeros_crc(pad), pad) if pad else crc) != want:
+                bad += 1
+        if bad:
+            report.append(f'{f["name"]}: leftover articles fail {bad} slice checks, cannot place')
+            continue
+        taken[L].update(order)
+        gaps_total += len(gaps)
+        built.append((f['name'], True, [arts_f[i] for i in order], len(gaps)))
+        written += 1
+        report.append(f'{f["name"]}: OK by elimination, {len(gaps)} missing article(s) left to PAR2 repair (parts {gaps})')
+    return (f'missing articles: {missing}; files rebuilt: {written}/{len(files)}; gaps: {gaps_total}\n' + '\n'.join(report)), \
+        built, index_article, ok
 
 
 def write_files(built, outdir):
     os.makedirs(outdir, exist_ok=True)
-    for name, _, arts_in_order in built:
+    for name, _, arts_in_order, _ in built:
         size = arts_in_order[0][2]
         with open(os.path.join(outdir, name), 'wb') as fh:
             fh.write(b''.join(a[4] for a in arts_in_order)[:size])
@@ -280,7 +341,7 @@ def write_files(built, outdir):
 
 def extras(built, index_article, ok):
     """Articles not in the rebuilt data files: PAR2 index, SFV/NFO and PAR2 recovery files, each as (kind, [articles])."""
-    used = {id(a) for _, _, arts_in_order in built for a in arts_in_order}
+    used = {id(a) for _, _, arts_in_order, _ in built for a in arts_in_order}
     rest = [a for a in ok if id(a) not in used]
     out, by_size = [], collections.defaultdict(list)
     for a in rest:

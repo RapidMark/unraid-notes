@@ -33,7 +33,7 @@ def _q(s):
 
 def write_nzb(path, name, groups, poster, built, extra):
     files = []
-    for fname, _, arts in built:
+    for fname, _, arts, _ in built:
         files.append((fname, arts))
     vol = 0
     for kind, arts in extra:
@@ -56,7 +56,8 @@ def write_nzb(path, name, groups, poster, built, extra):
         out.append(f'<file poster="{html.escape(poster, quote=True)}" date="{now}" subject="{subj}"><groups>')
         out += [f'<group>{g}</group>' for g in groups]
         out.append('</groups><segments>')
-        out += [f'<segment bytes="{a[6]}" number="{i}">{html.escape(a[5])}</segment>' for i, a in enumerate(arts, 1)]
+        # real part numbers, so a part missing from a file shows as a gap that PAR2 repairs
+        out += [f'<segment bytes="{a[6]}" number="{a[0]}">{html.escape(a[5])}</segment>' for a in arts]
         out.append('</segments></file>')
     out.append('</nzb>')
     with open(path, 'w') as f:
@@ -103,14 +104,20 @@ def main():
             log(f'index: could not rebuild {name}: {report.splitlines()[0]}')
             continue
         first = min(built, key=lambda b: b[0])            # .part01.rar / .rar / .001
-        locked = archive_locked(b''.join(a[4] for a in first[2][:2])[:65536])
+        head = [a for a in first[2] if a[0] <= 2]
+        if [a[0] for a in head] != [1, 2][:len(head)] or not head:
+            state[poster] = {'t': now, 'result': 'start of first volume missing', 'name': name}
+            continue
+        locked = archive_locked(b''.join(a[4] for a in head)[:65536])
         if locked:
             state[poster] = {'t': now, 'result': f'passworded ({locked})', 'name': name}
             continue
         path = IMPORT + re.sub(r'[/\\:*?"<>|]', '_', name)[:200] + '.nzb'
         write_nzb(path, name, r['groups'].split(','), poster, built, assemble.extras(built, index_article, ok))
         state[poster] = {'t': now, 'result': 'indexed', 'name': name, 'seconds': round(time.time() - t0)}
-        log(f'index: {name} ({r["mb"]} MB, {len(built)} volumes, {round(time.time() - t0)} s)')
+        gaps = sum(b[3] for b in built)
+        log(f'index: {name} ({r["mb"]} MB, {len(built)} volumes, {round(time.time() - t0)} s'
+            + (f', {gaps} missing article(s) left to PAR2 repair)' if gaps else ')'))
         imported += 1
         del arts, built, ok
     if imported:

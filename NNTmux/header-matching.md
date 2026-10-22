@@ -103,6 +103,17 @@ The first such upload (`Oddity.2024.2160p…-LuCY`, 2026-10-20) kept the index j
 - the search gives up on a block after 200,000 tries ("too many combinations") and the upload is marked "could not rebuild";
 - the index job stops at the first file that fails, and only imports an upload when every file was rebuilt (before, a failed file was just left out of the NZB).
 
+### Missing articles: placement by elimination
+
+Some uploads fail because one article never reached the catalogue (NNTmux missed its header). `Ragebait.2025…-LuCY` (2026-10-22): 29 of 30 volumes rebuilt, and at one position there were 28 candidates instead of 29. No search limit helps there; the article simply isn't in the list.
+
+Once every other volume of that size is rebuilt, the articles left over can only belong to the failed one: one per position, except the gap. The assembler then:
+- places them by part number, but only if no position has more than one left;
+- checks every PAR2 block that doesn't touch a gap (Ragebait: all passed);
+- allows at most 5 missing articles per upload, and leaves them out of the NZB. NZB segments carry the real part numbers, so the download client sees the gap and repairs it from the PAR2 recovery volumes, which are in the NZB.
+
+If the start of the first volume is missing, the upload is skipped, because the password check needs those bytes.
+
 ### Password checks without extracting
 
 - **Headers encrypted (password needed even to list files):**
